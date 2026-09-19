@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0B0F14;
+    color: #F8FAFC;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Custom Industrial UI Glass & Borders */
+.industrial-card {
+  background-color: #151D26;
+  border: 1px solid #273340;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.industrial-card:hover {
+  background-color: #1B2530;
+  border-color: #384A5E;
+}
+
+/* Glowing Border Utilities */
+.border-glow-cyan {
+  border-color: #00D4FF;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.25);
+}
+
+.border-glow-amber {
+  border-color: #F59E0B;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
+}
+
+.border-glow-red {
+  border-color: #EF4444;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+.border-glow-purple {
+  border-color: #7C5CFF;
+  box-shadow: 0 0 15px rgba(124, 92, 255, 0.25);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0F14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #273340;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00D4FF;
+}
