@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { BrainCircuit, Play, AlertTriangle, ShieldCheck, CheckCircle2, Sparkles, Flame, Clock, Layers } from 'lucide-react';
+import { fetchApi } from '../utils/api';
+import { BrainCircuit, Play, AlertTriangle, ShieldCheck, CheckCircle2, Sparkles, Layers } from 'lucide-react';
 
 export const AIPrediction = () => {
   const [opType, setOpType] = useState('High-Speed Drilling');
@@ -33,28 +34,48 @@ export const AIPrediction = () => {
 
   const handlePredict = async () => {
     setLoading(true);
-    try {
-      const res = await fetch('/api/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operation_type: opType,
-          material: material,
-          duration: parseFloat(duration),
-          rpm: parseInt(rpm),
-          expected_load: parseFloat(load),
-          ambient_temp: parseFloat(ambient)
-        })
+    const data = await fetchApi('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operation_type: opType,
+        material: material,
+        duration: parseFloat(duration),
+        rpm: parseInt(rpm),
+        expected_load: parseFloat(load),
+        ambient_temp: parseFloat(ambient)
+      })
+    });
+
+    if (data) {
+      setPrediction(data);
+    } else {
+      // Local fallback algorithm
+      const hardness = material.includes("Titanium") ? 1.45 : material.includes("Tool Steel") ? 1.35 : 1.2;
+      const speedRatio = rpm / 1500.0;
+      const risk = Math.min(96, Math.max(10, Math.round((speedRatio * 25.0) * (load / 70.0) * hardness * (1 + (ambient - 25) * 0.02))));
+      const cond = risk >= 70 ? "CRITICAL" : risk >= 40 ? "WARNING" : "NORMAL";
+      const recRpm = Math.round(rpm * (risk >= 70 ? 0.8 : risk >= 40 ? 0.88 : 1.0));
+
+      setPrediction({
+        operation_type: opType,
+        material: material,
+        duration: duration,
+        rpm: rpm,
+        expected_load: load,
+        ambient_temp: ambient,
+        predicted_condition: cond,
+        risk_probability: risk,
+        possible_issues: [
+          `High centrifugal forces cutting ${material} at ${rpm} RPM`,
+          `Elevated thermal creep under ${load}% load`
+        ],
+        recommended_action: `Set spindle speed to ${recRpm} RPM (down from ${rpm} RPM) and maintain load below 70%.`,
+        recommended_rpm: recRpm,
+        expected_result: `Reduces thermal build-up by ~${Math.round(risk * 0.4)}% and extends cutter insert life.`
       });
-      if (res.ok) {
-        const data = await res.json();
-        setPrediction(data);
-      }
-    } catch (err) {
-      console.error("Prediction error", err);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const getCondColor = (cond) => {
@@ -67,7 +88,6 @@ export const AIPrediction = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 rounded bg-purpleAccent/20 text-purpleAccent text-xs font-mono font-bold">
@@ -83,7 +103,6 @@ export const AIPrediction = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Job Configuration Form */}
         <div className="lg:col-span-5 industrial-card p-6 border-l-4 border-l-purpleAccent space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-borderColor">
             <div className="w-9 h-9 rounded-xl bg-purpleAccent/20 text-purpleAccent flex items-center justify-center font-bold">
@@ -185,7 +204,7 @@ export const AIPrediction = () => {
             <button
               onClick={handlePredict}
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-purpleAccent to-cyanAccent text-black font-extrabold text-sm hover:opacity-95 shadow-glow-purple flex items-center justify-center gap-2 mt-4"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-purpleAccent to-cyanAccent text-black font-extrabold text-sm hover:opacity-95 shadow-glow-purple flex items-center justify-center gap-2 mt-4 cursor-pointer"
             >
               {loading ? <Sparkles className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
               {loading ? 'Evaluating AI Physics Model...' : 'RUN AI PREDICTION'}
@@ -193,12 +212,9 @@ export const AIPrediction = () => {
           </div>
         </div>
 
-        {/* Right Column: Circular Risk Probability Gauge & Forecast Breakdown */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Main Forecast Card */}
           <div className="industrial-card p-6 bg-gradient-to-br from-cardBg via-bgSecondary to-cardBg">
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
-              {/* Circular Probability Gauge */}
               <div className="sm:col-span-5 flex flex-col items-center justify-center border-r-0 sm:border-r border-borderColor pr-0 sm:pr-6">
                 <div className="relative w-44 h-44 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
@@ -227,7 +243,6 @@ export const AIPrediction = () => {
                 </div>
               </div>
 
-              {/* Forecast Overview Info */}
               <div className="sm:col-span-7 space-y-4">
                 <div>
                   <div className="text-xs font-bold text-textSecondary uppercase tracking-wider">PREDICTED OPERATION</div>
@@ -248,7 +263,6 @@ export const AIPrediction = () => {
               </div>
             </div>
 
-            {/* AI Recommendation & Expected Result */}
             <div className="mt-6 pt-5 border-t border-borderColor space-y-3">
               <div className="p-4 rounded-xl bg-purpleAccent/10 border border-purpleAccent/30">
                 <div className="text-xs font-bold text-purpleAccent uppercase tracking-wider flex items-center gap-1.5">

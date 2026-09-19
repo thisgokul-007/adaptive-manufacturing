@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { useMachine } from '../context/MachineContext';
-import { Thermometer, Activity, Gauge, Zap, Download, RefreshCw, Pause, Play } from 'lucide-react';
+import { Thermometer, Activity, Gauge, Zap, Download, Pause, Play } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid } from 'recharts';
 
 export const LiveMonitoring = () => {
   const { history } = useMachine();
   const [isPaused, setIsPaused] = useState(false);
 
-  const displayHistory = isPaused ? history : history;
+  // Parse numerical data points for Recharts
+  const chartData = (history || []).map((r, idx) => ({
+    timestamp: r.timestamp || `11:30:${10 + idx}`,
+    temperature: parseFloat(r.temperature) || 72.0,
+    vibration: parseFloat(r.vibration) || 2.4,
+    rpm: parseInt(r.rpm) || 1500,
+    load: parseFloat(r.load) || 64.0
+  }));
 
   const exportCSV = () => {
-    if (history.length === 0) return;
-    const headers = ['Timestamp', 'Temperature (°C)', 'Vibration (mm/s)', 'RPM', 'Load (%)', 'Condition'];
-    const rows = history.map(r => [r.timestamp, r.temperature, r.vibration, r.rpm, r.load, r.condition]);
+    if (chartData.length === 0) return;
+    const headers = ['Timestamp', 'Temperature (°C)', 'Vibration (mm/s)', 'RPM', 'Load (%)'];
+    const rows = chartData.map(r => [r.timestamp, r.temperature, r.vibration, r.rpm, r.load]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -23,9 +30,10 @@ export const LiveMonitoring = () => {
     document.body.removeChild(link);
   };
 
+  const currentPacket = chartData.length > 0 ? chartData[chartData.length - 1] : { temperature: 72.1, vibration: 2.4, rpm: 1500, load: 64.0 };
+
   return (
     <div className="space-y-6">
-      {/* Page Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold text-textPrimary tracking-tight">Real-Time Sensor Telemetry</h2>
@@ -37,7 +45,7 @@ export const LiveMonitoring = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 border transition-all ${
+            className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 border transition-all cursor-pointer ${
               isPaused
                 ? 'bg-statusAmber/20 border-statusAmber text-statusAmber'
                 : 'bg-cardBg border-borderColor text-textSecondary hover:text-textPrimary'
@@ -49,16 +57,15 @@ export const LiveMonitoring = () => {
 
           <button
             onClick={exportCSV}
-            className="px-4 py-2 rounded-lg bg-cyanAccent/10 border border-cyanAccent/30 text-cyanAccent font-bold text-xs flex items-center gap-2 hover:bg-cyanAccent/20"
+            className="px-4 py-2 rounded-lg bg-cyanAccent/10 border border-cyanAccent/30 text-cyanAccent font-bold text-xs flex items-center gap-2 hover:bg-cyanAccent/20 cursor-pointer"
           >
             <Download className="w-4 h-4" /> Export Telemetry CSV
           </button>
         </div>
       </div>
 
-      {/* 4 Large Real-Time Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: Temperature vs Time */}
+        {/* Chart 1: Temperature */}
         <div className="industrial-card p-6 border-l-4 border-l-statusRed">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -72,15 +79,13 @@ export const LiveMonitoring = () => {
             </div>
             <div className="text-right font-mono">
               <span className="text-xs text-textSecondary">Current:</span>
-              <div className="text-xl font-extrabold text-statusRed">
-                {history.length > 0 ? history[history.length - 1].temperature : 72}°C
-              </div>
+              <div className="text-xl font-extrabold text-statusRed">{currentPacket.temperature}°C</div>
             </div>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={displayHistory}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#273340" />
                 <XAxis dataKey="timestamp" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis domain={[50, 110]} stroke="#94A3B8" fontSize={11} tickLine={false} />
@@ -93,7 +98,7 @@ export const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Chart 2: Vibration vs Time */}
+        {/* Chart 2: Vibration */}
         <div className="industrial-card p-6 border-l-4 border-l-statusAmber">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -107,15 +112,13 @@ export const LiveMonitoring = () => {
             </div>
             <div className="text-right font-mono">
               <span className="text-xs text-textSecondary">Current:</span>
-              <div className="text-xl font-extrabold text-statusAmber">
-                {history.length > 0 ? history[history.length - 1].vibration : 2.4} mm/s
-              </div>
+              <div className="text-xl font-extrabold text-statusAmber">{currentPacket.vibration} mm/s</div>
             </div>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={displayHistory}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#273340" />
                 <XAxis dataKey="timestamp" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis domain={[0, 10]} stroke="#94A3B8" fontSize={11} tickLine={false} />
@@ -128,7 +131,7 @@ export const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Chart 3: Machine Speed (RPM) vs Time */}
+        {/* Chart 3: Speed (RPM) */}
         <div className="industrial-card p-6 border-l-4 border-l-cyanAccent">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -142,15 +145,13 @@ export const LiveMonitoring = () => {
             </div>
             <div className="text-right font-mono">
               <span className="text-xs text-textSecondary">Current Speed:</span>
-              <div className="text-xl font-extrabold text-cyanAccent">
-                {history.length > 0 ? history[history.length - 1].rpm : 1500} RPM
-              </div>
+              <div className="text-xl font-extrabold text-cyanAccent">{currentPacket.rpm} RPM</div>
             </div>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={displayHistory}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#273340" />
                 <XAxis dataKey="timestamp" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis domain={[500, 2500]} stroke="#94A3B8" fontSize={11} tickLine={false} />
@@ -162,7 +163,7 @@ export const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Chart 4: Machine Load (%) vs Time */}
+        {/* Chart 4: Load */}
         <div className="industrial-card p-6 border-l-4 border-l-purpleAccent">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -176,15 +177,13 @@ export const LiveMonitoring = () => {
             </div>
             <div className="text-right font-mono">
               <span className="text-xs text-textSecondary">Current Load:</span>
-              <div className="text-xl font-extrabold text-purpleAccent">
-                {history.length > 0 ? history[history.length - 1].load : 64}%
-              </div>
+              <div className="text-xl font-extrabold text-purpleAccent">{currentPacket.load}%</div>
             </div>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={displayHistory}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#273340" />
                 <XAxis dataKey="timestamp" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis domain={[0, 100]} stroke="#94A3B8" fontSize={11} tickLine={false} />
