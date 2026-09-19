@@ -37,12 +37,18 @@ export const MachineProvider = ({ children }) => {
   const [history, setHistory] = useState([]);
   const [events, setEvents] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Demo Mode State
   const [demoActive, setDemoActive] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const demoTimerRef = useRef(null);
+
+  const showToast = (msg, type = "info") => {
+    setToastMessage({ message: msg, type, id: Date.now() });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   useEffect(() => {
     let eventSource = null;
@@ -60,7 +66,7 @@ export const MachineProvider = ({ children }) => {
       };
 
       eventSource.onerror = () => {
-        eventSource.close();
+        if (eventSource) eventSource.close();
         startPolling();
       };
     } catch (e) {
@@ -100,7 +106,7 @@ export const MachineProvider = ({ children }) => {
 
     if (packet.condition === "CRITICAL" || packet.condition === "WARNING") {
       setNotifications((prev) => {
-        if (prev.length > 0 && prev[0].condition === packet.condition) return prev;
+        if (prev.length > 0 && prev[0].message === packet.reason) return prev;
         const newAlert = {
           id: Date.now(),
           condition: packet.condition,
@@ -114,7 +120,7 @@ export const MachineProvider = ({ children }) => {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/history?limit=40');
+      const res = await fetch('/api/history?limit=60');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) setHistory(data);
@@ -126,7 +132,7 @@ export const MachineProvider = ({ children }) => {
 
   const fetchTimeline = async () => {
     try {
-      const res = await fetch('/api/timeline?limit=30');
+      const res = await fetch('/api/timeline?limit=50');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setEvents(data);
@@ -136,6 +142,7 @@ export const MachineProvider = ({ children }) => {
     }
   };
 
+  // API Call Actions
   const setScenario = async (scenarioName) => {
     try {
       const res = await fetch('/api/scenario', {
@@ -147,26 +154,31 @@ export const MachineProvider = ({ children }) => {
         const data = await res.json();
         handleNewTelemetry(data.telemetry);
         fetchTimeline();
+        showToast(`Triggered scenario: [${scenarioName}]`, "success");
       }
     } catch (err) {
       console.error("Set scenario error", err);
+      showToast("Failed to set scenario", "error");
     }
   };
 
   const applyAdaptiveControl = async (targetRpm) => {
     try {
+      const rpmNum = parseInt(targetRpm) || 1200;
       const res = await fetch('/api/adaptive/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_rpm: targetRpm })
+        body: JSON.stringify({ target_rpm: rpmNum })
       });
       if (res.ok) {
         const data = await res.json();
         handleNewTelemetry(data.telemetry);
         fetchTimeline();
+        showToast(`Closed-loop speed adjusted to ${rpmNum} RPM!`, "success");
       }
     } catch (err) {
       console.error("Apply adaptive control error", err);
+      showToast("Failed to apply adaptive control", "error");
     }
   };
 
@@ -181,9 +193,11 @@ export const MachineProvider = ({ children }) => {
         const data = await res.json();
         handleNewTelemetry(data.telemetry);
         fetchTimeline();
+        showToast(`${sensorType.toUpperCase()} sensor ${connectedState ? 'reconnected' : 'unplugged'}!`, connectedState ? "success" : "warning");
       }
     } catch (err) {
       console.error("Sensor toggle error", err);
+      showToast("Failed to toggle sensor connection", "error");
     }
   };
 
@@ -197,12 +211,15 @@ export const MachineProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         handleNewTelemetry(data.telemetry);
+        showToast("Injected custom telemetry parameters!", "info");
       }
     } catch (err) {
       console.error("Manual param injection error", err);
+      showToast("Failed to inject parameters", "error");
     }
   };
 
+  // Demo Mode Script Execution
   const demoSteps = [
     { step: 1, title: "Normal Operation", desc: "Machine running at nominal baseline (1500 RPM, 72°C)", action: () => setScenario("NORMAL") },
     { step: 2, title: "Load Surge", desc: "Heavy milling operation initiates (Load increases to 88%)", action: () => setScenario("HIGH_LOAD") },
@@ -221,6 +238,7 @@ export const MachineProvider = ({ children }) => {
     setDemoStep(1);
     setDemoPlaying(true);
     executeDemoStep(1);
+    showToast("Automated 10-Step Demo Mode Started!", "info");
   };
 
   const stopDemoMode = () => {
@@ -228,19 +246,17 @@ export const MachineProvider = ({ children }) => {
     setDemoPlaying(false);
     if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
     setScenario("NORMAL");
+    showToast("Exited Demo Mode", "info");
   };
 
   const togglePauseDemo = () => {
-    setDemoPlaying(!demoPlaying);
+    setDemoPlaying((prev) => !prev);
   };
 
   const executeDemoStep = (stepNum) => {
-    if (stepNum > 10) {
-      setDemoPlaying(false);
-      return;
-    }
-    setDemoStep(stepNum);
-    const stepConfig = demoSteps.find(s => s.step === stepNum);
+    const validStep = Math.max(1, Math.min(10, stepNum));
+    setDemoStep(validStep);
+    const stepConfig = demoSteps.find(s => s.step === validStep);
     if (stepConfig && stepConfig.action) {
       stepConfig.action();
     }
@@ -268,6 +284,7 @@ export const MachineProvider = ({ children }) => {
         history,
         events,
         notifications,
+        toastMessage,
         setScenario,
         applyAdaptiveControl,
         toggleSensorConnection,

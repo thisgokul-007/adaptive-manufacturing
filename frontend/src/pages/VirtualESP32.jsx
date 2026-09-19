@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMachine } from '../context/MachineContext';
 import { Cpu, Wifi, Radio, Zap, Sliders, CheckCircle2, AlertTriangle, AlertOctagon, Terminal } from 'lucide-react';
 
@@ -8,6 +8,13 @@ export const VirtualESP32 = () => {
   const [manualVib, setManualVib] = useState(telemetry.vibration);
   const [manualRpm, setManualRpm] = useState(telemetry.rpm);
   const [manualLoad, setManualLoad] = useState(telemetry.load);
+
+  useEffect(() => {
+    if (telemetry.temperature) setManualTemp(telemetry.temperature);
+    if (telemetry.vibration) setManualVib(telemetry.vibration);
+    if (telemetry.rpm) setManualRpm(telemetry.rpm);
+    if (telemetry.load) setManualLoad(telemetry.load);
+  }, [telemetry]);
 
   const handleApplyManual = () => {
     injectManualParameters({
@@ -28,7 +35,6 @@ export const VirtualESP32 = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Title */}
       <div>
         <h2 className="text-2xl font-extrabold text-textPrimary tracking-tight">Virtual ESP32 Sensor Lab</h2>
         <p className="text-sm text-textSecondary">
@@ -36,11 +42,9 @@ export const VirtualESP32 = () => {
         </p>
       </div>
 
-      {/* Main Grid: Hardware Device Mockup + Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: ESP32 Hardware Device Card & Telemetry Stream */}
         <div className="lg:col-span-6 space-y-6">
-          {/* Virtual Hardware Box */}
           <div className="industrial-card p-6 border-t-4 border-t-cyanAccent relative overflow-hidden bg-gradient-to-b from-cardBg to-bgSecondary">
             <div className="flex items-center justify-between pb-4 border-b border-borderColor">
               <div className="flex items-center gap-3">
@@ -53,7 +57,6 @@ export const VirtualESP32 = () => {
                 </div>
               </div>
 
-              {/* Status LEDs */}
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <div className="text-[10px] text-textSecondary uppercase font-mono">TX/RX Data</div>
@@ -71,7 +74,6 @@ export const VirtualESP32 = () => {
               </div>
             </div>
 
-            {/* Hardware Pin Telemetry Readout */}
             <div className="grid grid-cols-2 gap-4 my-5">
               <div className="p-3 rounded-lg bg-bgPrimary border border-borderColor">
                 <div className="text-xs text-textSecondary uppercase font-mono">GPIO Pin 34 (NTC Temp)</div>
@@ -91,14 +93,12 @@ export const VirtualESP32 = () => {
               </div>
             </div>
 
-            {/* Live Packet Counter */}
             <div className="flex items-center justify-between text-xs text-textSecondary pt-3 border-t border-borderColor/60 font-mono">
               <span>Telemetry Packets Transmitted: <strong className="text-textPrimary">{telemetry.packet_count || 1284}</strong></span>
               <span>Baud Rate: <strong className="text-cyanAccent">115200 bps</strong></span>
             </div>
           </div>
 
-          {/* Raw JSON Payload Inspector */}
           <div className="industrial-card p-6">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-extrabold text-sm text-textPrimary flex items-center gap-2">
@@ -123,7 +123,6 @@ export const VirtualESP32 = () => {
 
         {/* Right Column: Scenario Trigger Buttons & Manual Sliders */}
         <div className="lg:col-span-6 space-y-6">
-          {/* Preset Scenario Cards */}
           <div className="industrial-card p-6">
             <h3 className="font-extrabold text-base text-textPrimary mb-1">
               PRESET SCENARIO SIMULATOR
@@ -155,7 +154,6 @@ export const VirtualESP32 = () => {
             </div>
           </div>
 
-          {/* Manual Sensor Injection Sliders */}
           <div className="industrial-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-extrabold text-base text-textPrimary flex items-center gap-2">

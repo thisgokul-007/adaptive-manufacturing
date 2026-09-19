@@ -3,6 +3,7 @@ import { MachineProvider } from './context/MachineContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DemoBanner } from './components/DemoBanner';
+import { ToastNotification } from './components/ToastNotification';
 
 import { Overview } from './pages/Overview';
 import { HardwareWorkbench } from './pages/HardwareWorkbench';
@@ -52,6 +53,7 @@ function AppContent() {
       <div className="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
         <Header activeTab={activeTab} />
         <DemoBanner />
+        <ToastNotification />
         <main className="p-8 max-w-7xl mx-auto w-full flex-1 space-y-6">
           {renderContent()}
         </main>
